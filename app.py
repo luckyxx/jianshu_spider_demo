@@ -38,7 +38,8 @@ def geturl():
             return redirect(url_for('jianshu_timeline',slug=user_slug))
         else:
             return render_template('index.html',error_msg='输入的用户主页有问题！请重新输入！')
-    return render_template('index.html')
+    else:
+        return render_template('index.html')
 
 BASE_HEADERS = {
     'Accept-Language': 'zh-CN,zh;q=0.8,en;q=0.6,zh-TW;q=0.4',
@@ -89,18 +90,42 @@ def get_like_comment_note_id( li):
 @app.route('/timeline')
 def jianshu_timeline():
     slug=request.args.get('slug')
-
     if slug:
-        print("slug"+slug)
-        get_user_info(slug)
+        baseinfo=db.userinfo.find_one({'slug':slug})
+        if baseinfo:
+            pass
 
-        get_user_timeline(slug)
-        baseinfo=db['userinfo'].find_one({'nikename':''})
-    #     baseinfo={
-    #     'nikename':'hahhh'
-    # }
-        save_timeline_to_mongodb(slug,user_timeline)
-        return render_template('index.html',error=slug)
+        else:
+            print("slug"+slug)
+            # get_user_info(slug)
+            baseinfo = get_user_info(slug)
+
+            get_user_timeline(slug)
+
+            save_timeline_to_mongodb(slug,user_timeline)
+            baseinfo['like_notes_num']=len(user_timeline['like_notes'])
+            baseinfo['like_notebooks_num'] = len(user_timeline['like_notebooks'])
+            baseinfo['share_notes_num'] = len(user_timeline['share_notes'])
+            baseinfo['comment_notes'] = len(user_timeline['comment_notes'])
+            baseinfo['reward_notes'] = len(user_timeline['reward_notes'])
+            baseinfo['like_comments'] = len(user_timeline['like_comments'])
+
+        # baseinfo['share_notes_num'] = len(baseinfo['share_notes'])
+        sorted_data = sorted(baseinfo['like_notes'], key=lambda x: x['time'])
+
+        sorted_data = sorted(baseinfo['like_notes'], key=lambda x: x['time'])
+        first_like_note = sorted_data[0]
+
+        sorted_data = sorted(baseinfo['like_users'], key=lambda x: x['time'])
+        first_like_users = sorted_data[0]
+
+        first_user_dict = {
+            'first_like_note': first_like_note,
+            'first_like_user': first_like_users,
+        }
+
+        return render_template('timeline.html',baseinfo=baseinfo,first_user_dict=first_user_dict)
+
     else:
         return render_template('index.html')
 
@@ -121,7 +146,7 @@ def get_user_info(slug):
     item['article_nums'] = base_infos[2]
     item['words_num'] = base_infos[3]
     item['like_nums'] = base_infos[4]
-    item['photo'] = dom_tree.xpath('.//div[@class="main-top"]/a[@class="avatar"]/img/@src')
+    item['photo'] = dom_tree.xpath('.//div[@class="main-top"]/a[@class="avatar"]/img/@src')[0]
     # print(photo)
     sex_info = dom_tree.xpath('.//div[@class="title"]/i/@class')
     if len(sex_info) == 0:
@@ -134,8 +159,7 @@ def get_user_info(slug):
     # print(sex)
     item['sex'] = sex
     save_to_mongodb(item)
-    # return item
-    return render_template('index.html')
+    return item
 
 
 def get_user_timeline(slug,maxid=-1,page=1):
@@ -148,12 +172,8 @@ def get_user_timeline(slug,maxid=-1,page=1):
     # print('url:'+url)
     response = requests.get(url,headers=BASE_HEADERS)
     tree = etree.HTML(response.text)
-    print("tree:"+str(tree))
-    print(type(tree))
-    li_tags = tree.xpath('//ul[@class="note-list"]/li')
-    # print(li_tags)
-    response = requests.get(url, headers=BASE_HEADERS)
-    tree = etree.HTML(response.text)
+    # print("tree:"+str(tree))
+    # print(type(tree))
     li_tags = tree.xpath('//ul[@class="note-list"]/li')
     # class ="note-list"] // li / text()
     # print(li_tags)

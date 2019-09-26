@@ -16,17 +16,51 @@
     });
 
     </script>
-    </head>
+</head>
 <body>
 
 <div id="dowebok">
 
-    <div class="section" id="base_info">
-        <h1>page 1</h1>
+ <div class="section" id="base_info">
+        <div align="center" >
+            <img id="head_pic" src={{ baseinfo['photo'] }} width="168" height="168">
+            <p>您好！&nbsp;<strong style="color:#FA8072">{{ baseinfo['nike_name'] }}</strong></p>
+            <p>截止至&nbsp;<b style="color:#FA8072">{{ baseinfo['update_time'] }}</b></p>
+            <p>您在简书关注了<b style="color:#FA8072">{{ baseinfo['following'] }}</b>个用户，
+                拥有粉丝<b style="color:#FA8072">{{ baseinfo['follower'] }}</b>个。</p>
+            <p>发表文章<b style="color:#FA8072">{{ baseinfo['article_nums'] }}</b>篇，
+                写下文字<b style="color:#FA8072">{{ baseinfo['words_num'] }}</b>个，
+                文章收获喜欢<b style="color:#FA8072">{{ baseinfo['like_nums'] }}</b>个,
+                喜欢文章<b style="color:#FA8072">{{ baseinfo['like_notes_num'] }}</b>篇</p>
+{#            <p>关注专题<b style="color:#FA8072">{{ baseinfo['like_colls_num'] }}</b>个，#}
+            关注文集<b style="color:#FA8072">{{ baseinfo['like_notebooks_num'] }}</b>个。</p>
+{#            <p>发表评论<b style="color:#FA8072">{{ baseinfo['comment_notes'] }}</b>次，#}
+{#            点赞别人评论<b style="color:#FA8072">{{ baseinfo['comment_notes'] }}</b>次。</p>#}
+            <p>打赏文章<b style="color:#FA8072">{{ baseinfo['reward_notes'] }}</b>次</p>
+        </div>
     </div>
 
-    <div class="section" id="firt_tag_time">
-        <h1>page 2</h1>
+     <div class="section" id="firt_tag_time">
+          <div align="center" >
+            <h3>加入简书以来的第一次</h3><br><br>
+            <p>您于<b style="color:#FA8072">{{ first_tag_time['join_time'] }}</b> 注册，加入简书</p>
+
+        {% if first_user_dict['first_like_user'] %}
+            <p>
+                <b style="color:#FA8072">{{ first_user_dict['first_like_user']['time']|safe }}</b>
+                &nbsp;
+                <a href="http://www.jianshu.com/u/{{ first_user_dict['first_like_user']['slug']|safe }}" target="_blank">第一次关注用户</a>
+            </p>
+        {% endif %}
+
+        {% if first_user_dict['first_like_note'] %}
+            <p>
+                <b style="color:#FA8072">{{ first_user_dict['first_like_note']['time']|safe }}</b>
+                &nbsp;
+                <a href="http://www.jianshu.com/p/{{ first_user_dict['first_like_note']['note_id']|safe }}" target="_blank">第一次喜欢文章</a>
+            </p>
+        {% endif %}
+          </div>
     </div>
 
     <div class="section" id="second_tag_time">
