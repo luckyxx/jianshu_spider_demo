@@ -14,6 +14,18 @@ MONGO_DATABASE = 'JianShu'
 client = pymongo.MongoClient(MONGO_HOST)
 db = client[MONGO_DATABASE]
 
+
+user_timeline ={
+    'comment_notes': [],
+    'like_notes': [],
+    'reward_notes': [],
+    'share_notes': [],
+    'like_users': [],
+    'like_colls': [],
+    'like_comments': [],
+    'like_notebooks': [],
+
+}
 @app.route('/', methods=['POST', 'GET'])
 def geturl():
     if request.method== 'POST':
@@ -39,15 +51,56 @@ BASE_HEADERS = {
     'Referer': 'http://www.jianshu.com',
 }
 
+def get_mark_time( li):
+    '''获取动态产生的时间'''
+    mark_time = li.xpath('.//@data-datetime')[0].split('+')[0].replace('T', ' ')
+    return mark_time
+
+
+def get_obj_title( li):
+    '''获取文章标题'''
+    title = li.xpath('.//a[@class="title"]/text()')[0]
+    return title
+
+
+def get_href_id( li):
+    '''获取文章id'''
+    href_id = li.xpath('.//a[@class="title"]/@href')[0].split('/')[-1]
+    return href_id
+
+
+def get_comment_text( li):
+    '''获取发表评论的内容'''
+    like_comment_text = ''.join(li.xpath('.//p[@class="comment"]/text()'))
+    return like_comment_text
+
+
+def get_like_comment_slug( li):
+    '''获取赞了用户评论的slug'''
+    like_comment_slug = li.xpath('.//div[@class="origin-author single-line"]//@href')[0].split('/')[-1]
+    return like_comment_slug
+
+
+def get_like_comment_note_id( li):
+    '''获取评论文章的id'''
+    like_comment_note_id = li.xpath('.//div[@class="origin-author single-line"]//@href')[1].split('/')[-1]
+    return like_comment_note_id
+
 @app.route('/timeline')
 def jianshu_timeline():
     slug=request.args.get('slug')
+
     if slug:
         print("slug"+slug)
         get_user_info(slug)
 
         get_user_timeline(slug)
-        return render_template('index.html',error_msg=slug)
+        baseinfo=db['userinfo'].find_one({'nikename':''})
+    #     baseinfo={
+    #     'nikename':'hahhh'
+    # }
+        save_timeline_to_mongodb(slug,user_timeline)
+        return render_template('index.html',error=slug)
     else:
         return render_template('index.html')
 
@@ -61,8 +114,6 @@ def get_user_info(slug):
     main_top = dom_tree.xpath('//div[@class="main-top"]')[0]
     item['slug'] = slug
     item['nike_name'] = main_top.xpath('.//a[@class="name"]/text()')[0]
-    # print(nike_name)
-    # print(main_top)
     base_infos = dom_tree.xpath('.//li//p/text()')
     # print(followers)
     item['following'] = base_infos[0]
@@ -83,7 +134,8 @@ def get_user_info(slug):
     # print(sex)
     item['sex'] = sex
     save_to_mongodb(item)
-    # return render_template('timeline.html')
+    # return item
+    return render_template('index.html')
 
 
 def get_user_timeline(slug,maxid=-1,page=1):
@@ -96,8 +148,8 @@ def get_user_timeline(slug,maxid=-1,page=1):
     # print('url:'+url)
     response = requests.get(url,headers=BASE_HEADERS)
     tree = etree.HTML(response.text)
-    # print("tree:"+str(tree))
-    # print(type(tree))
+    print("tree:"+str(tree))
+    print(type(tree))
     li_tags = tree.xpath('//ul[@class="note-list"]/li')
     # print(li_tags)
     response = requests.get(url, headers=BASE_HEADERS)
@@ -110,8 +162,68 @@ def get_user_timeline(slug,maxid=-1,page=1):
         data_type = li.xpath('.//div[@class="info"]/span/@data-type')[0]
         dynamic_time = li.xpath('.//div[@class="info"]/span/@data-datetime')
         true_dynamic_time = dynamic_time[0].replace('T', '  ')
-        true_dynamic_time = true_dynamic_time.replace('+08:00', '')
+        mark_time = true_dynamic_time.replace('+08:00', '')
         print(data_type, true_dynamic_time)
+
+        if li.xpath('.//span[@data-type="comment_note"]'):
+            comment_note = {}
+            comment_note['comment_text'] = get_comment_text(li)
+            comment_note['time'] = mark_time
+            # comment_note['note_title'] = get_obj_title(li)
+            comment_note['note_id'] = get_href_id(li)
+            print('发表评论', comment_note)
+            user_timeline['comment_notes'].append(comment_note)
+        elif li.xpath('.//span[@data-type="like_note"]'):
+            like_note = {}
+            like_note['time'] = mark_time
+            # like_note['note_title'] = get_obj_title(li)
+            like_note['note_id'] = get_href_id(li)
+            print('喜欢文章', like_note)
+            user_timeline['like_notes'].append(like_note)
+        elif li.xpath('.//span[@data-type="reward_note"]'):
+            reward_note = {}
+            reward_note['time'] = mark_time
+            # reward_note['note_title'] = get_obj_title(li)
+            reward_note['note_id'] = get_href_id(li)
+            print('赞赏文章', reward_note)
+            user_timeline['reward_notes'].append(reward_note)
+        elif li.xpath('.//span[@data-type="share_note"]'):
+            share_note = {}
+            share_note['time'] = mark_time
+            # share_note['note_title'] = get_obj_title(li)
+            share_note['note_id'] = get_href_id(li)
+            print('发表文章', share_note)
+            user_timeline['share_notes'].append(share_note)
+        elif li.xpath('.//span[@data-type="like_user"]'):
+            like_user = {}
+            like_user['time'] = mark_time
+            like_user['slug'] = get_href_id(li)
+            print('关注作者', like_user)
+            user_timeline['like_users'].append(like_user)
+        elif li.xpath('.//span[@data-type="like_collection"]'):
+            like_coll = {}
+            like_coll['time'] = mark_time
+            like_coll['coll_id'] = get_href_id(li)
+            print('关注专题', like_coll)
+            user_timeline['like_colls'].append(like_coll)
+        elif li.xpath('.//span[@data-type="like_comment"]'):
+            like_comment = {}
+            like_comment['time'] = mark_time
+            like_comment['comment_text'] = get_comment_text(li)
+            like_comment['slug'] = get_like_comment_slug(li)
+            like_comment['note_id'] = get_like_comment_note_id(li)
+            print('赞了评论', like_comment)
+            user_timeline['like_comments'].append(like_comment)
+        elif li.xpath('.//span[@data-type="like_notebook"]'):
+            like_notebook = {}
+            like_notebook['time'] = mark_time
+            like_notebook['notebook_id'] = get_href_id(li)
+            print('关注文集', like_notebook)
+            user_timeline['like_notebooks'].append(like_notebook)
+        elif li.xpath('.//span[@data-type="join_jianshu"]'):
+            join_time = mark_time
+            print('加入简书', join_time)
+            user_timeline['join_time'] = join_time
 
     if len(li_tags ) !=0:
         feedid=li_tags[-1].xpath('.//@id')[0]
@@ -122,6 +234,14 @@ def get_user_timeline(slug,maxid=-1,page=1):
 
 def save_to_mongodb(item):
     db['userinfo'].update({'slug':item['slug']}, {'$setOnInsert':item}, upsert=True)
+
+def save_timeline_to_mongodb(slug,user_timeline):
+    all_time=['comment_notes','like_notes','reward_notes','share_notes','like_users','like_colls',
+              'like_comments','like_notebooks']
+    for tag in all_time:
+        if tag in user_timeline:
+            db.userinfo.update({'slug':slug},{'$push':{tag:{'$each':user_timeline[tag]}}})  # push 插入字典 each插入列表
+
 
 if __name__ == '__main__':
     app.run(debug=True)
