@@ -1,4 +1,6 @@
+import datetime
 import re
+from collections import Counter
 
 import pymongo
 from lxml import etree
@@ -103,15 +105,19 @@ def jianshu_timeline():
             get_user_timeline(slug)
 
             save_timeline_to_mongodb(slug,user_timeline)
-            baseinfo['like_notes_num']=len(user_timeline['like_notes'])
+            baseinfo['like_notes_num'] = len(user_timeline['like_notes'])
             baseinfo['like_notebooks_num'] = len(user_timeline['like_notebooks'])
             baseinfo['share_notes_num'] = len(user_timeline['share_notes'])
             baseinfo['comment_notes'] = len(user_timeline['comment_notes'])
             baseinfo['reward_notes'] = len(user_timeline['reward_notes'])
             baseinfo['like_comments'] = len(user_timeline['like_comments'])
+            baseinfo['update_time']=datetime.datetime.now()
+            print(baseinfo['update_time'])
 
         # baseinfo['share_notes_num'] = len(baseinfo['share_notes'])
-        sorted_data = sorted(baseinfo['like_notes'], key=lambda x: x['time'])
+
+        sorted_data = sorted(baseinfo['share_notes'], key=lambda x: x['time'])
+        first_share_note=sorted_data[0]
 
         sorted_data = sorted(baseinfo['like_notes'], key=lambda x: x['time'])
         first_like_note = sorted_data[0]
@@ -122,9 +128,66 @@ def jianshu_timeline():
         first_user_dict = {
             'first_like_note': first_like_note,
             'first_like_user': first_like_users,
+            'first_share_note':first_share_note,
         }
 
-        return render_template('timeline.html',baseinfo=baseinfo,first_user_dict=first_user_dict)
+        zh_parent_tags = ['发表评论', '喜欢文章', '赞赏文章', '发表文章', '关注用户', '关注专题', '点赞评论', '关注文集']
+        en_parent_tags = ['comment_notes', 'like_notes', 'reward_notes', 'share_notes',
+                          'like_users', 'like_colls', 'like_comments', 'like_notebooks']
+        tags_data = []
+        index = 0
+        for tag in zh_parent_tags:
+            dic_tag = {}
+            dic_tag['name'] = tag
+            dic_tag['value'] = len(baseinfo[en_parent_tags[index]])
+            index += 1
+            tags_data.append(dic_tag)
+
+
+        month_lst=[]
+        for tag in en_parent_tags:
+            for item in baseinfo[tag]:
+                month_lst.append(item['time'][0:7])
+        # print(month_lst)
+        month_counter=Counter(month_lst)
+        month_sorted_lst=sorted(month_counter.items(),key=lambda  x:x[0])
+        month_frequency_dict={}
+        month_frequency_dict['month_line']=[item[0] for item in month_sorted_lst]
+        month_frequency_dict['month_freqency']=[item[1] for item in month_sorted_lst]
+
+        day_lst=[]
+        for tag in en_parent_tags:
+            for item in baseinfo[tag]:
+                day_lst.append(item['time'][0:10])
+        # print(day_lst)
+        day_counter = Counter(day_lst)
+        day_sorted_lst = sorted(day_counter.items(), key=lambda x: x[0])
+        # print(day_sorted_lst)
+        day_frequency_dict = {}
+        day_frequency_dict['day_line'] = [item[0] for item in day_sorted_lst]
+        day_frequency_dict['day_freqency'] = [item[1] for item in day_sorted_lst]
+
+        hour_lst = []
+        for tag in en_parent_tags:
+            for item in baseinfo[tag]:
+                hour_lst.append(item['time'][12:16])
+        print(hour_lst)
+        hour_counter = Counter(hour_lst)
+        hour_sorted_lst = sorted(hour_counter.items(), key=lambda x: x[0])
+        # print(day_sorted_lst)
+        hour_frequency_dict = {}
+        hour_frequency_dict['hour_line'] = [item[0] for item in hour_sorted_lst]
+        hour_frequency_dict['hour_freqency'] = [item[1] for item in hour_sorted_lst]
+
+
+
+        return render_template('timeline.html',
+                               baseinfo=baseinfo,
+                               first_user_dict=first_user_dict,
+                               tags_data=tags_data,
+                               month_data=month_frequency_dict,
+                               day_data=day_frequency_dict,
+                               hour_data=hour_frequency_dict)
 
     else:
         return render_template('index.html')
