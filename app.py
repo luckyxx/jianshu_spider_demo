@@ -171,7 +171,7 @@ def jianshu_timeline():
         for tag in en_parent_tags:
             for item in baseinfo[tag]:
                 hour_lst.append(item['time'][12:16])
-        print(hour_lst)
+        # print(hour_lst)
         hour_counter = Counter(hour_lst)
         hour_sorted_lst = sorted(hour_counter.items(), key=lambda x: x[0])
         # print(day_sorted_lst)
@@ -179,6 +179,20 @@ def jianshu_timeline():
         hour_frequency_dict['hour_line'] = [item[0] for item in hour_sorted_lst]
         hour_frequency_dict['hour_freqency'] = [item[1] for item in hour_sorted_lst]
 
+        time_lst=[]
+        for tag in en_parent_tags:
+            for item in baseinfo[tag]:
+                time_lst.append(item['time'][0:])
+        print(time_lst)
+        # for x in time_lst:
+        user_week_you_want=[day_to_week(x) for x in time_lst]
+        # print(user_week_you_want)
+        counter_you_want_f = Counter(user_week_you_want)
+        sort_counter = sorted(counter_you_want_f.items(), key=lambda t: t[0])
+        # print(sort_counter)
+        week_data={}
+        week_data['week_line']=[ item[0] for item in sort_counter]
+        week_data['week_freqency']=[item[1] for item in sort_counter]
 
 
         return render_template('timeline.html',
@@ -187,7 +201,8 @@ def jianshu_timeline():
                                tags_data=tags_data,
                                month_data=month_frequency_dict,
                                day_data=day_frequency_dict,
-                               hour_data=hour_frequency_dict)
+                               hour_data=hour_frequency_dict,
+                               week_data=week_data)
 
     else:
         return render_template('index.html')
@@ -325,6 +340,12 @@ def save_timeline_to_mongodb(slug,user_timeline):
         if tag in user_timeline:
             db.userinfo.update({'slug':slug},{'$push':{tag:{'$each':user_timeline[tag]}}})  # push 插入字典 each插入列表
 
+def day_to_week(day_string):
+    time = datetime.datetime.strptime(day_string, '%Y-%m-%d %H:%M:%S')
+    week_day = time.weekday()
+    week_day_dict = {0: '周一', 1: '周二', 2: '周三', 3: '周四',
+                     4: '周五', 5: '周六', 6: '周日', }
+    return week_day_dict[week_day]
 
 if __name__ == '__main__':
     app.run(debug=True)
