@@ -412,6 +412,93 @@
         </script>
     </div>
 
+
+
+{% if week_hour_share_notes %}
+        <div class="section" id="share_note_week_hour">
+        <div align="center">
+            <h4>一周中发表文章时间频率分布</h4>
+            <!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+            <div id="share_note_week_hour_chart" style="width:100%;height:580px;"></div>
+            <script type="text/javascript">
+                // 基于准备好的dom，初始化echarts实例
+                var myChart = echarts.init(document.getElementById('share_note_week_hour_chart'));
+
+                // 指定图表的配置项和数据
+
+                var hours = ['12am', '1am', '2am', '3am', '4am', '5am', '6am',
+                        '7am', '8am', '9am','10am','11am',
+                        '12pm', '1pm', '2pm', '3pm', '4pm', '5pm',
+                        '6pm', '7pm', '8pm', '9pm', '10pm', '11pm'];
+                var days = ['周一', '周二',
+                        '周三', '周四', '周五', '周六','周日'];
+
+                var data = {{ week_hour_share_notes|tojson }};
+
+                var option = {
+                    tooltip: {
+                        position: 'left'
+                    },
+                    title: [],
+                    color:['#FF6666','#EFE42A','#64BD3D','#EE9201','#29AAE3',
+                    '#B74AE5','#0AAF9F','#E89589'],
+                    singleAxis: [],
+                    series: []
+                };
+
+                echarts.util.each(days, function (day, idx) {
+                    option.title.push({
+                        textBaseline: 'middle',
+                        top: (idx + 0.5) * 100 / 7 + '%',
+                        text: day
+                    });
+                    option.singleAxis.push({
+                        left: 120,
+                        type: 'category',
+                        boundaryGap: false,
+                        data: hours,
+                        top: (idx * 100 / 7 + 5) + '%',
+                        height: (100 / 7 - 10) + '%',
+                        axisLabel: {
+                            interval: 2
+                        }
+                    });
+                    option.series.push({
+                        singleAxisIndex: idx,
+                        coordinateSystem: 'singleAxis',
+                        type: 'scatter',
+                        data: [],
+                        symbolSize: function (dataItem) {
+                            return dataItem[1]/{{ max_freq }} * 100;
+                        }
+                    });
+                });
+
+                echarts.util.each(data, function (dataItem) {
+                    option.series[dataItem[0]].data.push([dataItem[1], dataItem[2]]);
+                });
+
+                //*必须，绑定图表自适应功能
+               window.onresize = function () {
+                   myChart.resize();
+                };
+
+                // 使用刚指定的配置项和数据显示图表。
+                myChart.setOption(option);
+
+            </script>
+    </div>
+    </div>
+    {% endif %}
+
+
+{#    <div class="section" id="comment_cloud">#}
+{#        <div align="center">#}
+{#            <h3>共写下评论 {{ comments_num }} 条，以下词语出现频率较高</h3>#}
+{#            {{ wordcloud_chart|safe }}#}
+{#        </div>#}
+{#    </div>#}
+
    <div class="section" id="end">
         <div align="center">
             <p style="font-size:72px;color:#FA8072;">谢谢观赏</p>

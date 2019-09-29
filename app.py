@@ -96,14 +96,11 @@ def jianshu_timeline():
         baseinfo=db.userinfo.find_one({'slug':slug})
         if baseinfo:
             pass
-
         else:
             print("slug"+slug)
             # get_user_info(slug)
             baseinfo = get_user_info(slug)
-
             get_user_timeline(slug)
-
             save_timeline_to_mongodb(slug,user_timeline)
             baseinfo['like_notes_num'] = len(user_timeline['like_notes'])
             baseinfo['like_notebooks_num'] = len(user_timeline['like_notebooks'])
@@ -120,6 +117,7 @@ def jianshu_timeline():
         first_share_note=sorted_data[0]
 
         sorted_data = sorted(baseinfo['like_notes'], key=lambda x: x['time'])
+        print("sorted_data:"+str(sorted_data))
         first_like_note = sorted_data[0]
 
         sorted_data = sorted(baseinfo['like_users'], key=lambda x: x['time'])
@@ -142,7 +140,6 @@ def jianshu_timeline():
             dic_tag['value'] = len(baseinfo[en_parent_tags[index]])
             index += 1
             tags_data.append(dic_tag)
-
 
         month_lst=[]
         for tag in en_parent_tags:
@@ -195,6 +192,24 @@ def jianshu_timeline():
         week_data['week_freqency']=[item[1] for item in sort_counter]
 
 
+
+
+        ###气泡图数据
+        week_hour_lst = []
+        for item in baseinfo['share_notes']:
+            week = date_to_week(item['time'])  # 周日----6
+            hour = item['time'][12:14]  # '2019-09-08 11:32:15'
+            week_hour = str(week) + hour  # 611
+            week_hour_lst.append(week_hour)
+
+        counter_week_hour = Counter(week_hour_lst)
+        max_freq = counter_week_hour.most_common(1)[0][1]
+
+        # ('611',5)-->#[6,11,5]
+        result_lst = []
+        for item in counter_week_hour.items():
+            lst_item = [int(item[0][0]), int(item[0][1:3]), item[1]]
+            result_lst.append(lst_item)
         return render_template('timeline.html',
                                baseinfo=baseinfo,
                                first_user_dict=first_user_dict,
@@ -202,12 +217,16 @@ def jianshu_timeline():
                                month_data=month_frequency_dict,
                                day_data=day_frequency_dict,
                                hour_data=hour_frequency_dict,
-                               week_data=week_data)
-
+                               week_data=week_data,
+                               week_hour_share_notes=result_lst,
+                               max_freq=max_freq)
     else:
         return render_template('index.html')
 
-
+def date_to_week(time_str):
+    timeobj = datetime.datetime.strptime(time_str,'%Y-%m-%d %H:%M:%S')
+    week = timeobj.weekday()
+    return week
 
 def get_user_info(slug):
     url = 'https://www.jianshu.com/u/' + slug
@@ -265,7 +284,7 @@ def get_user_timeline(slug,maxid=-1,page=1):
 
         if li.xpath('.//span[@data-type="comment_note"]'):
             comment_note = {}
-            comment_note['comment_text'] = get_comment_text(li)
+            comment_note['comment_text'] = get_comment_text(li).replace('\n','').strip()
             comment_note['time'] = mark_time
             # comment_note['note_title'] = get_obj_title(li)
             comment_note['note_id'] = get_href_id(li)
@@ -328,6 +347,8 @@ def get_user_timeline(slug,maxid=-1,page=1):
         maxid=int(feedid[5:]) -1
         print(maxid)
         get_user_timeline(slug,maxid,page+1)
+
+
 
 
 def save_to_mongodb(item):
