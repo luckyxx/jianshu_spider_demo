@@ -43,7 +43,7 @@ python-dateutil==2.8.0
 pytz==2019.2
 queuelib==1.5.0
 requests==2.22.0
-Scrapy==1.7.3
+Scrapy==2.6.1
 service-identity==18.1.0
 simplejson==3.16.0
 six==1.12.0
